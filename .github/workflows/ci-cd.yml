@@ -1,0 +1,65 @@
+name: Java CI/CD with Maven
+
+env:
+  S3_BUCKET_NAME: "best-workshop"
+  PACKAGE_NAME: "accenture-best-0.0.1-SNAPSHOT.jar"
+  AWS_REGION: "eu-central-1"
+  ELASTICBEANSTALK_ENVIRONMENT: "Accenturebestapp-env"
+  ELASTICBEANSTALK_APPLICATION: "accenture-best-app"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          cache: maven
+        # Run mvn command to build .jar file
+      - name: Build with Maven
+        run: mvn clean package
+        # Check if the file has been created
+      - name: Check if JAR was creted
+        run: ls -lt target/
+        # Connect to aws
+      - name: Connect to AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+        # Push .jar file to S3
+      - name: Upload JAR to S3 Bucket
+        run: aws s3 cp target/${{ env.PACKAGE_NAME }} s3://${{env.S3_BUCKET_NAME}}/
+
+  CD:
+    needs: CI
+    runs-on: ubuntu-latest
+    steps:
+      # Connect to aws
+      - name: Connect to AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      # Create new ElasticBeanstalk App Version
+      - name: Create New App Version
+        run: >
+          aws elasticbeanstalk create-application-version
+          --application-name ${{env.ELASTICBEANSTALK_APPLICATION}}
+          --version-label "Ver-${{github.sha}}"
+          --source-bundle S3Bucket=${{env.S3_BUCKET_NAME}},S3Key=${{env.PACKAGE_NAME}}
+          --description "CommitSHA-${{github.sha}}"
+      # Deploy the App Version
+      - name: Update Environment
+        run: aws elasticbeanstalk update-environment --environment-name ${{env.ELASTICBEANSTALK_ENVIRONMENT}} --version-label "Ver-${{github.sha}}"
