@@ -1,11 +1,15 @@
 name: Java CI/CD with Maven
 
 env:
-  S3_BUCKET_NAME: "best-workshop"
   PACKAGE_NAME: "accenture-best-0.0.1-SNAPSHOT.jar"
+  # Must match the region of the AWS Region where the resources were created
   AWS_REGION: "eu-central-1"
-  ELASTICBEANSTALK_ENVIRONMENT: "Accenturebestapp-env"
-  ELASTICBEANSTALK_APPLICATION: "accenture-best-app"
+  # Must match the name of the S3 Bucket in AWS
+  S3_BUCKET_NAME: "best-workshop"
+  # Must match the name of the Elastic Beanstalk application in AWS
+  ELASTICBEANSTALK_APPLICATION: "best-workshop-app"
+  # Must match the name of the Elastic Beanstalk environment in AWS
+  ELASTICBEANSTALK_ENVIRONMENT: "Bestworkshopapp-env-1"
 
 on:
   push:
